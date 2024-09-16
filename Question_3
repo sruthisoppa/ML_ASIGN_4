@@ -1,0 +1,49 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix
+import seaborn as sns
+
+# Load the Iris dataset
+iris_data = pd.read_csv("Iris.csv")
+iris_data.drop('Id', axis=1, inplace=True)
+
+# Separate features (features) and target (labels)
+features = iris_data.drop('Species', axis=1)
+labels = iris_data['Species']
+
+# Scaling the features
+min_max_scaler = MinMaxScaler()
+scaled_features = min_max_scaler.fit_transform(features)
+scaled_features_df = pd.DataFrame(scaled_features, columns=['scaled_SepalLength', 'scaled_SepalWidth',
+                                                            'scaled_PetalLength', 'scaled_PetalWidth'])
+scaled_iris_df = pd.concat([scaled_features_df, labels], axis=1)
+
+# PCA for dimensionality reduction and visualization
+pca_transformed = PCA(n_components=2).fit_transform(features)
+pca_df = pd.DataFrame(pca_transformed, columns=['PCA1', 'PCA2'])
+pca_combined_df = pd.concat([pca_df, labels], axis=1)
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=0)
+
+# Support Vector Classifier (SVM) with linear kernel
+svm_classifier = SVC(kernel='linear').fit(X_train, y_train)
+y_predicted = svm_classifier.predict(X_test)
+
+# Confusion Matrix and Accuracy
+confusion_mat = confusion_matrix(y_test, y_predicted)
+confusion_mat_df = pd.DataFrame(confusion_mat,
+                                index=['setosa', 'versicolor', 'virginica'],
+                                columns=['setosa', 'versicolor', 'virginica'])
+
+plt.figure(figsize=(5.5, 4))
+sns.heatmap(confusion_mat_df, annot=True, cmap="Blues", fmt='g')
+plt.title('SVM Linear Kernel \nAccuracy:{0:.3f}'.format(accuracy_score(y_test, y_predicted)))
+plt.ylabel('True label')
+plt.xlabel('Predicted label')
+plt.show()
