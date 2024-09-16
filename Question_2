@@ -1,0 +1,30 @@
+# Import necessary libraries
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn import tree
+import matplotlib.pyplot as plt
+
+# a. Load the dataset
+data = pd.read_csv('enjoysport_dataset.csv')
+
+# Dropping 'Day' column as it is not relevant for classification
+data = data.drop(['Day'], axis=1)
+
+# b. Label Encoding for categorical features
+le = LabelEncoder()
+for column in data.columns:
+    data[column] = le.fit_transform(data[column])
+
+# Splitting features (X) and target (y)
+X = data.drop('play', axis=1)  # Features
+y = data['play']  # Target
+
+# c. Create a Decision Tree Classifier
+clf = DecisionTreeClassifier(criterion='entropy')  # Using entropy as the criterion
+clf.fit(X, y)
+
+# d. Visualize the tree
+plt.figure(figsize=(12,8))
+tree.plot_tree(clf, feature_names=X.columns, class_names=['no', 'yes'], filled=True)
+plt.show()
