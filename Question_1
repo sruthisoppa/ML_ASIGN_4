@@ -1,0 +1,109 @@
+import numpy as np
+import pandas as pd
+
+# Importing data without the 'Day' column
+def importdata(path='enjoysport_dataset.csv'):
+    data = pd.read_csv(path, header=0)
+    data = data.drop(columns=['Day'])  # Dropping 'Day' column
+    print("Dataset Length: ", len(data))
+    print("Dataset Shape: ", data.shape)
+    return data
+
+# Entropy calculation
+def Entropy(data):
+    d = data.iloc[:, -1].value_counts()  # Count occurrences of each class in the target
+    s = 0
+    for v in d.keys():
+        p = d[v] / sum(d)
+        s -= p * np.log2(p)
+    return s
+
+# Information Gain calculation
+def IG(data, A):
+    Es = Entropy(data)  # Overall entropy
+    val = data[A].unique()  # Unique values in the feature (e.g., 'sunny', 'rainy')
+    s_c = data[A].value_counts()  # Counts of each value in feature A
+    s_v = []
+
+    # Calculate entropy for each subset of data corresponding to each value of A
+    for v in val:
+        ds = data[data[A] == v]  # Subset of data for value v
+        s = Entropy(ds)  # Entropy of subset
+        s_v.append(s)
+
+    # Calculate weighted average of entropies
+    weighted_entropy = sum((s_c[v] / len(data)) * s_v[i] for i, v in enumerate(val))
+
+    return Es - weighted_entropy  # Information gain
+
+# Node class to represent decision nodes
+class Node():
+    def _init_(self, name=None, attr=None):
+        self.name = name
+        self.attr = attr
+
+    def call(self):
+        return self.name
+
+# Function to build decision tree node
+def DTNode(data, features_used):
+    node = Node()
+    IGmax = 0
+    v_best = None
+    val_list = [v for v in data.columns[:-1] if v not in features_used]  # Features excluding the target column
+
+    if val_list:
+        for v in val_list:
+            ig = IG(data, v)  # Calculate information gain for feature v
+            if ig > IGmax:
+                IGmax = ig
+                v_best = v
+
+        if v_best:
+            features_used.append(v_best)  # Mark this feature as used
+            node.name = v_best  # Best feature becomes the node name
+            node.attr = data[v_best].unique()  # Get unique values of the best feature
+            return node
+        else:
+            return None
+    else:
+        return None
+
+# Recursive classifier
+def DTclassifier(data, features_used):
+    if Entropy(data) == 0:  # If pure (only one class remains), return that class
+        return data.iloc[0, -1]
+
+    root = DTNode(data, features_used)  # Find the best feature for the current node
+
+    if not root:
+        return None
+
+    tree = []
+
+    for attr in root.attr:
+        subset_data = data[data[root.name] == attr]  # Subset data for the current feature's value
+        subtree = DTclassifier(subset_data, features_used[:])  # Recursive call for each subset
+
+        tree.append((attr, subtree))
+
+    return {root.name: tree}
+
+# Load data and build decision tree
+data = importdata()  # Load dataset without 'Day' column
+features_used = []  # List to track used features
+decision_tree = DTclassifier(data, features_used)  # Build decision tree
+
+# Convert decision tree format to a single-line output
+def format_tree(tree):
+    if isinstance(tree, dict):
+        formatted_tree = []
+        for key, value in tree.items():
+            for item in value:
+                formatted_tree.append(f"('{item[0]}', {format_tree(item[1])})")
+        return f"{{'{key}': [{', '.join(formatted_tree)}]}}"
+    else:
+        return f"'{tree}'"
+
+formatted_tree = format_tree(decision_tree)
+print("Final Decision Tree Structure: ", formatted_tree)  # Output the tree structure in a single line
